@@ -32,7 +32,7 @@ func (t *Task) start() {
 		for {
 			select {
 			case <-time.After(10 * time.Second): // 10秒超时
-				fmt.Printf("%v:%v 任务超时！", t.Type, t.TaskId)
+				fmt.Printf("%v:%v 任务超时！\n", t.Type, t.TaskId)
 				t.Status = Pending // 超时释放
 				return
 			}
