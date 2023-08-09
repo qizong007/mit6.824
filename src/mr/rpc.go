@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"fmt"
 	"log"
 	"net/rpc"
 	"os"
@@ -32,8 +31,8 @@ func call(rpcname string, req interface{}, resp interface{}) error {
 
 	err = c.Call(rpcname, req, resp)
 	if err != nil {
-		fmt.Printf("rpc call failed. req=%v, resp=%v, err=%v\n",
-			toJsonString(req), toJsonString(resp), err)
+		//fmt.Printf("rpc call failed. req=%v, resp=%v, err=%v\n",
+		//	toJsonString(req), toJsonString(resp), err)
 	}
 
 	return nil

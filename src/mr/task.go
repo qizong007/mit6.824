@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -30,11 +29,9 @@ func (t *Task) start() {
 	// 超时监听
 	go func() {
 		for {
-			select {
-			case <-time.After(10 * time.Second): // 10秒超时
-				fmt.Printf("%v:%v 任务超时！\n", t.Type, t.TaskId)
+			time.Sleep(10 * time.Second)
+			if t.Status == Processing {
 				t.Status = Pending // 超时释放
-				return
 			}
 		}
 	}()

@@ -28,3 +28,24 @@ func readFile(filename string) (string, error) {
 	}
 	return string(content), nil
 }
+
+func writeFile(filename string, content string) error {
+	f, err := ioutil.TempFile("", "mr")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(f.Name())
+	_, err = f.Write([]byte(content))
+	if err != nil {
+		return err
+	}
+	err = f.Close()
+	if err != nil {
+		return err
+	}
+	err = os.Rename(f.Name(), filename)
+	if err != nil {
+		return err
+	}
+	return nil
+}

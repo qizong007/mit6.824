@@ -2,17 +2,15 @@ package mr
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
-	"time"
 )
 
 func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string) string) {
 	for {
 		taskResp, err := getTask()
 		if err != nil {
-			time.Sleep(time.Second)
+			//time.Sleep(time.Second)
 			continue
 		}
 		switch taskResp.Type {
@@ -28,7 +26,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 				})
 				if err != nil {
 					fmt.Printf("handleMapTask commitTask failed. taskId:%v, err:%v\n", taskResp.TaskId, err)
-					time.Sleep(time.Second)
+					//time.Sleep(time.Second)
 					continue
 				}
 			}
@@ -40,7 +38,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			})
 			if err != nil {
 				fmt.Printf("handleMapTask commitTask failed. taskId:%v, err:%v\n", taskResp.TaskId, err)
-				time.Sleep(time.Second)
+				//time.Sleep(time.Second)
 				continue
 			}
 		case ReduceType:
@@ -56,7 +54,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 				})
 				if err != nil {
 					fmt.Printf("handleReduceTask commitTask failed. taskId:%v, err:%v\n", taskResp.TaskId, err)
-					time.Sleep(time.Second)
+					//time.Sleep(time.Second)
 					continue
 				}
 			}
@@ -68,7 +66,7 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 			})
 			if err != nil {
 				fmt.Printf("handleReduceTask commitTask failed. taskId:%v, err:%v\n", taskResp.TaskId, err)
-				time.Sleep(time.Second)
+				//time.Sleep(time.Second)
 				continue
 			}
 		}
@@ -76,11 +74,6 @@ func Worker(mapf func(string, string) []KeyValue, reducef func(string, []string)
 }
 
 func handleMapTask(mapf func(string, string) []KeyValue, taskId int, filename string) error {
-	start := time.Now()
-	fmt.Printf("[task%v] start handleMapTask, filename=%v.\n", taskId, filename)
-	defer func() {
-		fmt.Printf("[task%v] finished handleMapTask, cost time: %v.\n", taskId, time.Since(start))
-	}()
 	content, err := readFile(filename)
 	if err != nil {
 		return err
@@ -90,21 +83,20 @@ func handleMapTask(mapf func(string, string) []KeyValue, taskId int, filename st
 		return err
 	}
 	nReduce := getTaskNumResp.NReduce
-	ofiles := make([]*os.File, 0)
+	onames := make([]string, 0)
+	outputContents := make([]string, 0)
 	for i := 0; i < nReduce; i++ {
 		oname := fmt.Sprintf(interFmt, taskId, i)
-		ofile, _ := os.Create(oname)
-		ofiles = append(ofiles, ofile)
+		onames = append(onames, oname)
+		outputContents = append(outputContents, "")
 	}
-	defer func() {
-		for _, ofile := range ofiles {
-			ofile.Close()
-		}
-	}()
 	kvList := mapf(filename, content)
 	for _, kv := range kvList {
 		shardNum := ihash(kv.Key) % nReduce
-		_, err = fmt.Fprintf(ofiles[shardNum], "%v %v\n", kv.Key, kv.Value)
+		outputContents[shardNum] += fmt.Sprintf("%v %v\n", kv.Key, kv.Value)
+	}
+	for i := range onames {
+		err = writeFile(onames[i], outputContents[i])
 		if err != nil {
 			return err
 		}
@@ -113,11 +105,6 @@ func handleMapTask(mapf func(string, string) []KeyValue, taskId int, filename st
 }
 
 func handleReduceTask(reducef func(string, []string) string, taskId int, filenames []string) error {
-	start := time.Now()
-	fmt.Printf("[task%v] start handleMapTask.\n", taskId)
-	defer func() {
-		fmt.Printf("[task%v] finished handleMapTask, cost time: %v.\n", taskId, time.Since(start))
-	}()
 	res := make([]*KeyValue, 0)
 	for _, filename := range filenames {
 		content, err := readFile(filename)
@@ -145,8 +132,7 @@ func handleReduceTask(reducef func(string, []string) string, taskId int, filenam
 	})
 
 	oname := fmt.Sprintf(outputFmt, taskId)
-	ofile, _ := os.Create(oname)
-	defer ofile.Close()
+	outputContent := ""
 
 	i := 0
 	for i < len(res) {
@@ -159,11 +145,11 @@ func handleReduceTask(reducef func(string, []string) string, taskId int, filenam
 			values = append(values, res[k].Value)
 		}
 		output := reducef(res[i].Key, values)
-		fmt.Fprintf(ofile, "%v %v\n", res[i].Key, output)
+		outputContent += fmt.Sprintf("%v %v\n", res[i].Key, output)
 		i = j
 	}
 
-	return nil
+	return writeFile(oname, outputContent)
 }
 
 func getTask() (*GetTaskResponse, error) {

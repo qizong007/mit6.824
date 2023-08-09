@@ -149,7 +149,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	reduceTasks := make(map[int]*Task, nReduce)
 
 	for i, fileName := range files {
-		taskId := i + 1
+		taskId := i
 		task := &Task{
 			TaskId: taskId,
 			Input:  fileName,
@@ -161,7 +161,7 @@ func MakeCoordinator(files []string, nReduce int) *Coordinator {
 	}
 
 	for i := 0; i < nReduce; i++ {
-		taskId := i + 1
+		taskId := i
 		input := func() string {
 			names := make([]string, 0, nReduce)
 			for mapTaskId := range mapTasks {
